@@ -68,6 +68,80 @@ function ptType(t){
 }
 function ptConf(c){ return ({community:"comunidade", confirmed:"confirmado"})[c] || c || ""; }
 
+/* ---------- pins reais do jogo (icons/pins/<slug>.webp) ---------- */
+const PIN_SET = new Set(["ahol-street-art","ammu-nation","arcade","atm","bank","bar","base-jump",
+  "basketball","book-swap","bus-stop","car-wash","cinema","clothing","collectible-card",
+  "convenience-store","drone-race","electronics","ev-charger","fence","fire-station","fishing",
+  "footwear","gang-operation","garage","gas-station","golf","gym","haircut","hidden-package",
+  "hospital","hunting","knife-flight","landmark","liquor-store","magazine","marina","message-bottle",
+  "meteorite","mini-golf","mural","nightclub","pay-n-spray","payday-loan","playlist","police-station",
+  "pool","public-transport","race","random-event","safe","safehouse","shooting-range","smash-n-grab",
+  "standout-vehicle","street-food","stunt-jump","tattoo","towable-atm","treasure","under-the-bridge",
+  "vehicle-rental","vehicle-request","vehicle-spawn","waink-curiosity","waink-landmark",
+  "waink-sculpture","weapon-spawn"]);
+/* pin padrão por categoria (quando o tipo não tem pin próprio); null = usa emoji */
+const KIND_PIN = {
+  card:"collectible-card", magazine:"magazine", playlist:"playlist", hoop:"basketball",
+  stunt:"stunt-jump", race:"race", drone:"drone-race", range:"shooting-range", arcade:"arcade",
+  gang:"gang-operation", bank:"bank", smash:"smash-n-grab", store:"convenience-store", fence:"fence",
+  other:"landmark", package:"hidden-package", meteorite:"meteorite", treasure:"treasure",
+  bottle:"message-bottle", bookswap:"book-swap", mural:"mural", streetart:"ahol-street-art",
+  vehicle:"standout-vehicle", bridge:"under-the-bridge", knife:"knife-flight", basejump:"base-jump",
+  fishing:"fishing", hunting:"hunting", event:"random-event", safe:"safe", towatm:"towable-atm",
+  payday:"payday-loan", weapon:"weapon-spawn", safehouse:"safehouse", shop:"convenience-store",
+  food:"street-food", transport:"public-transport", civic:"police-station", leisure:"gym",
+  building:"landmark", waink:"waink-landmark",
+  flamingo:null, meditation:null, underwater:null, kenton:null, bret:null, hotel:null, nature:null,
+};
+/* overrides por tipo (tipos sem slug direto que têm um pin bom) */
+const TYPE_PIN = {
+  "Café and takeout":"street-food","Cafe Takeout":"street-food","Food and drink":"bar",
+  "Basketball hoop":"basketball","Clothes shop":"clothing","Weapon pickup":"weapon-spawn",
+  "Unique Weapon":"weapon-spawn","Fishing spot":"fishing","Station":"public-transport",
+  "Hair salon":"haircut","Shoe shop":"footwear","Mod shop":"garage","Tattoo parlour":"tattoo",
+  "Airport":"public-transport","Message in a bottle":"message-bottle","1010 mural":"mural",
+  "Parachuting":"base-jump","City / Town":"landmark","Helipad":"public-transport",
+  "helipad":"public-transport","Ferry":"public-transport","Gang compound":"gang-operation",
+  "Unique playlist":"playlist","Comics":"magazine","Comic":"magazine","Car Meet":"standout-vehicle",
+  "Yellow Loot Box":"hidden-package","Scoop Container":"hidden-package","Meditation spot":null,
+};
+function slugify(t){
+  return (t||"").toLowerCase().replace(/'/g,"").replace(/&/g,"and")
+    .replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"");
+}
+function pinSlug(e){
+  const s = slugify(e.type);
+  if (PIN_SET.has(s)) return s;
+  if (/\bcard$/i.test(e.type||"")) return "collectible-card";
+  if (Object.prototype.hasOwnProperty.call(TYPE_PIN, e.type)) return TYPE_PIN[e.type];
+  if (Object.prototype.hasOwnProperty.call(KIND_PIN, e.kind)) return KIND_PIN[e.kind];
+  return null;
+}
+/* fallback quando o pin falha ao carregar */
+window.pinErr = function(img, color, emoji){
+  const b = document.createElement("b");
+  b.className = "gpin-fb"; b.style.background = color; b.textContent = emoji;
+  if (img.parentNode) img.parentNode.replaceChild(b, img);
+};
+function gameIcon(e, cat){
+  const slug = pinSlug(e);
+  const emoji = (cat && cat.icon) || "📍";
+  const color = (cat && cat.colour) || "#9aa0a6";
+  if (slug){
+    return L.divIcon({
+      className: "gpin",
+      html: `<img src="${IMG_BASE}/icons/pins/${slug}.webp" alt="" loading="lazy"
+              onerror="pinErr(this,'${color}','${emoji}')">`,
+      iconSize: [27, 30], iconAnchor: [13.5, 29], popupAnchor: [0, -27],
+    });
+  }
+  return L.divIcon({
+    className: "gpin",
+    html: `<b class="gpin-fb" style="background:${color}">${emoji}</b>`,
+    iconSize: [26, 30], iconAnchor: [13, 29], popupAnchor: [0, -27],
+  });
+}
+
 /* -------- utilidades de armazenamento -------- */
 function lsGet(k, fb){ try{ const v=localStorage.getItem(k); return v==null?fb:JSON.parse(v);}catch(e){return fb;} }
 function lsSet(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
@@ -101,10 +175,38 @@ function tileLayer(style){
 }
 let baseLayer = tileLayer("night").addTo(map);
 
+/* -------- prédios (camada vetorial por cima dos tiles) -------- */
+const buildingRenderer = L.canvas({ padding: 0.5 });
+let buildingLayer = null;
+function isDay(){ return document.getElementById("toggle-day").checked; }
+function buildingStyle(day){
+  return day
+    ? { stroke:true, color:"#8f8699", weight:0.4, fill:true, fillColor:"#b9afc4", fillOpacity:0.92 }
+    : { stroke:true, color:"#6f87a6", weight:0.45, fill:true, fillColor:"#475a73", fillOpacity:0.96 };
+}
+function applyBuildingVisibility(){
+  if (!buildingLayer) return;
+  const show = map.getZoom() >= 2;
+  if (show && !map.hasLayer(buildingLayer)){ buildingLayer.addTo(map); baseLayer.bringToBack(); }
+  else if (!show && map.hasLayer(buildingLayer)) map.removeLayer(buildingLayer);
+}
+fetch("data/surface.json").then(r=>r.json()).then(fc => {
+  buildingLayer = L.geoJSON(fc, {
+    filter: f => f.properties && f.properties.layer === "building",
+    coordsToLatLng: c => L.latLng(-c[1], c[0]),
+    renderer: buildingRenderer,
+    interactive: false,
+    style: () => buildingStyle(isDay()),
+  });
+  applyBuildingVisibility();
+}).catch(err => console.warn("prédios indisponíveis:", err));
+map.on("zoomend", applyBuildingVisibility);
+
 document.getElementById("toggle-day").addEventListener("change", (e) => {
   map.removeLayer(baseLayer);
   baseLayer = tileLayer(e.target.checked ? "day" : "night").addTo(map);
   baseLayer.bringToBack();
+  if (buildingLayer) buildingLayer.setStyle(buildingStyle(e.target.checked));
 });
 
 /* -------- ícones -------- */
@@ -189,10 +291,7 @@ function buildLayers(locs){
     const kind = e.kind || "other";
     if (!kindLayer[kind]) kindLayer[kind] = L.layerGroup();
     const cat = catOf(kind);
-    const m = L.circleMarker([-e.y, e.x], {
-      renderer: canvasRenderer, radius: 5, weight: 1,
-      color: "rgba(255,255,255,.85)", fillColor: cat.colour, fillOpacity: .92,
-    });
+    const m = L.marker([-e.y, e.x], { icon: gameIcon(e, cat), riseOnHover: true });
     m.bindPopup(() => popupHTML(e, cat), { maxWidth: 300, minWidth: 268 });
     m.addTo(kindLayer[kind]);
     if (e.id) markerById[e.id] = { marker: m, kind };
