@@ -106,6 +106,16 @@ body{margin:0;background:var(--bg);color:var(--fg);
 .pin.big{width:30px;height:30px}
 .pin.big span{font-size:15px}
 
+/* imagem base do jogo (nitidez ao ampliar) */
+.game-base{image-rendering:auto}
+
+/* rótulos de bairros / regiões */
+.area-label{background:none!important;border:0!important;overflow:visible}
+.area-label span{position:absolute;transform:translate(-50%,-50%);white-space:nowrap;
+  font-family:"Rajdhani",sans-serif;text-transform:uppercase;letter-spacing:2.5px;font-weight:700;
+  font-size:13px;color:rgba(255,255,255,.92);
+  text-shadow:0 1px 3px rgba(0,0,0,.95),0 0 2px rgba(0,0,0,.95),0 0 10px rgba(0,0,0,.5)}
+
 /* pins reais do jogo (icons/pins/<slug>.webp) */
 .gpin{background:transparent!important;border:0!important}
 .gpin img{width:27px;height:30px;display:block;

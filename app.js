@@ -173,41 +173,73 @@ function tileLayer(style){
     noWrap: true, bounds: BOUNDS, keepBuffer: 4,
   });
 }
-let baseLayer = tileLayer("night").addTo(map);
+/* -------- base do mapa: "Jogo" (imagem oficial GTA VI) ou "Noite" (tiles) -------- */
+/* Imagem base: GTA VI in-game map, GTADB.ORG (CC BY 4.0), artwork Rockstar. Markers gta6mapsize.com.
+   Bounds alinhados à silhueta da ilha (land.json) pra casar com os 3800 pontos. */
+const GAME_MAP_URL    = "img/basemap-game.webp";
+const GAME_MAP_BOUNDS = L.latLngBounds([-792.7, 164.7], [-169.7, 633.1]);
+const gameBase  = L.imageOverlay(GAME_MAP_URL, GAME_MAP_BOUNDS, { className: "game-base" });
+let   nightTiles = null;
+let   baseMode   = "game";
 
-/* -------- prédios (camada vetorial por cima dos tiles) -------- */
+/* prédios vetoriais (só no modo Noite; no modo Jogo já vêm desenhados na imagem) */
 const buildingRenderer = L.canvas({ padding: 0.5 });
 let buildingLayer = null;
-function isDay(){ return document.getElementById("toggle-day").checked; }
-function buildingStyle(day){
-  return day
-    ? { stroke:true, color:"#8f8699", weight:0.4, fill:true, fillColor:"#b9afc4", fillOpacity:0.92 }
-    : { stroke:true, color:"#6f87a6", weight:0.45, fill:true, fillColor:"#475a73", fillOpacity:0.96 };
+function buildingStyle(){
+  return { stroke:true, color:"#6f87a6", weight:0.45, fill:true, fillColor:"#475a73", fillOpacity:0.96 };
 }
 function applyBuildingVisibility(){
   if (!buildingLayer) return;
-  const show = map.getZoom() >= 2;
-  if (show && !map.hasLayer(buildingLayer)){ buildingLayer.addTo(map); baseLayer.bringToBack(); }
+  const show = baseMode === "night" && map.getZoom() >= 2;
+  if (show && !map.hasLayer(buildingLayer)) buildingLayer.addTo(map);
   else if (!show && map.hasLayer(buildingLayer)) map.removeLayer(buildingLayer);
 }
 fetch("data/surface.json").then(r=>r.json()).then(fc => {
   buildingLayer = L.geoJSON(fc, {
     filter: f => f.properties && f.properties.layer === "building",
     coordsToLatLng: c => L.latLng(-c[1], c[0]),
-    renderer: buildingRenderer,
-    interactive: false,
-    style: () => buildingStyle(isDay()),
+    renderer: buildingRenderer, interactive: false, style: buildingStyle,
   });
   applyBuildingVisibility();
 }).catch(err => console.warn("prédios indisponíveis:", err));
 map.on("zoomend", applyBuildingVisibility);
 
-document.getElementById("toggle-day").addEventListener("change", (e) => {
-  map.removeLayer(baseLayer);
-  baseLayer = tileLayer(e.target.checked ? "day" : "night").addTo(map);
-  baseLayer.bringToBack();
-  if (buildingLayer) buildingLayer.setStyle(buildingStyle(e.target.checked));
+function setBase(mode){
+  baseMode = mode;
+  if (mode === "game"){
+    if (nightTiles) map.removeLayer(nightTiles);
+    gameBase.addTo(map); gameBase.bringToBack();
+  } else {
+    map.removeLayer(gameBase);
+    if (!nightTiles) nightTiles = tileLayer("night");
+    nightTiles.addTo(map); nightTiles.bringToBack();
+  }
+  applyBuildingVisibility();
+}
+setBase("game");
+document.getElementById("toggle-base").addEventListener("change", (e) => {
+  setBase(e.target.checked ? "game" : "night");
 });
+
+/* -------- rótulos de bairros / regiões -------- */
+let labelLayer = null;
+function applyLabelVisibility(){
+  if (!labelLayer) return;
+  const show = map.getZoom() <= 5;
+  if (show && !map.hasLayer(labelLayer)) labelLayer.addTo(map);
+  else if (!show && map.hasLayer(labelLayer)) map.removeLayer(labelLayer);
+}
+fetch("data/labels.json").then(r=>r.json()).then(list => {
+  labelLayer = L.layerGroup();
+  list.forEach(l => {
+    L.marker([-l.y, l.x], {
+      interactive:false, keyboard:false, zIndexOffset:500,
+      icon: L.divIcon({ className:"area-label", html:`<span>${l.name}</span>`, iconSize:[0,0] }),
+    }).addTo(labelLayer);
+  });
+  applyLabelVisibility();
+  map.on("zoomend", applyLabelVisibility);
+}).catch(e => console.warn("rótulos indisponíveis:", e));
 
 /* -------- ícones -------- */
 function pinIcon(color, emoji, big){

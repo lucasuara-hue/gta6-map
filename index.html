@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet"
         href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" />
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css?v=2" />
 </head>
 <body>
   <div id="app">
@@ -36,17 +36,19 @@
         </div>
         <label class="daynight">
           <span>🌙 Noite</span>
-          <input id="toggle-day" type="checkbox" />
-          <span>☀️ Dia</span>
+          <input id="toggle-base" type="checkbox" checked />
+          <span>🗺️ Jogo</span>
         </label>
       </header>
 
       <div id="layers" class="layers"><p class="loading">Carregando locais…</p></div>
 
       <footer class="side-foot">
-        <p>Dados do mapa: <a href="https://github.com/fbritoferreira/gta6" target="_blank" rel="noopener">Open GTA 6 Map</a>
-        (<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC&nbsp;BY&nbsp;4.0</a>).
-        Projeto de fãs — não oficial, sem vínculo com a Rockstar Games.</p>
+        <p>Mapa (modo Jogo): <a href="https://gta6mapsize.com" target="_blank" rel="noopener">gta6mapsize.com</a> ·
+        base GTA&nbsp;VI do <a href="https://gtadb.org" target="_blank" rel="noopener">GTADB.ORG</a>
+        (<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC&nbsp;BY&nbsp;4.0</a>, arte Rockstar).
+        Pontos e tiles: <a href="https://github.com/fbritoferreira/gta6" target="_blank" rel="noopener">Open GTA 6 Map</a>
+        (CC&nbsp;BY&nbsp;4.0). Projeto de fãs — não oficial, sem vínculo com a Rockstar Games.</p>
       </footer>
     </aside>
 
@@ -59,6 +61,6 @@
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-  <script src="app.js"></script>
+  <script src="app.js?v=2"></script>
 </body>
 </html>
