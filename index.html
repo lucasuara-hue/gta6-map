@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Mapa Interativo GTA 6 — Leonida</title>
+  <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- SIDEBAR -->
+    <aside id="sidebar" aria-label="Painel de camadas">
+      <header class="side-head">
+        <div class="brand">
+          <span class="brand-mark">◎</span>
+          <div>
+            <h1>GTA&nbsp;6 · Leonida</h1>
+            <p class="tagline">Mapa interativo — Vice City &amp; arredores</p>
+          </div>
+        </div>
+        <div class="searchbox">
+          <input id="search" type="search" autocomplete="off"
+                 placeholder="Buscar local (ex: Mandy, banco, Jason)…" />
+          <ul id="search-results" role="listbox"></ul>
+        </div>
+        <div class="toolbar">
+          <button id="btn-all-on"  type="button" class="tool">Mostrar tudo</button>
+          <button id="btn-all-off" type="button" class="tool">Ocultar tudo</button>
+          <button id="btn-addpin"  type="button" class="tool" aria-pressed="false">+ Meu pino</button>
+        </div>
+        <label class="daynight">
+          <span>🌙 Noite</span>
+          <input id="toggle-day" type="checkbox" />
+          <span>☀️ Dia</span>
+        </label>
+      </header>
+
+      <div id="layers" class="layers"><p class="loading">Carregando locais…</p></div>
+
+      <footer class="side-foot">
+        <p>Dados do mapa: <a href="https://github.com/fbritoferreira/gta6" target="_blank" rel="noopener">Open GTA 6 Map</a>
+        (<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC&nbsp;BY&nbsp;4.0</a>).
+        Projeto de fãs — não oficial, sem vínculo com a Rockstar Games.</p>
+      </footer>
+    </aside>
+
+    <!-- MAP -->
+    <main id="map-wrap">
+      <div id="map"></div>
+      <button id="sidebar-toggle" type="button" aria-label="Mostrar/ocultar painel">☰</button>
+      <div id="coords" class="coords" aria-live="off">—</div>
+    </main>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

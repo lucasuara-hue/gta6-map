@@ -1,0 +1,151 @@
+/* ===== GTA 6 Leonida — mapa interativo ===== */
+/* Layout: sidebar de camadas à esquerda + mapa em tela cheia, tema escuro "satélite". */
+:root{
+  --bg:#0b1016;           /* fundo app        */
+  --panel:#121a24;        /* painéis          */
+  --panel-2:#0e151d;      /* fundo listas     */
+  --line:#223040;         /* bordas           */
+  --fg:#e7eef6;           /* texto            */
+  --muted:#8aa0b4;        /* texto secundário */
+  --accent:#2dd4bf;       /* turquesa Vice    */
+  --accent-2:#ff5c8a;     /* rosa flamingo    */
+  --warn:#ffd166;
+  --shadow:0 8px 30px rgba(0,0,0,.45);
+  --r:10px;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--fg);
+  font-family:"Inter",system-ui,-apple-system,Segoe UI,Roboto,sans-serif;overflow:hidden}
+
+#app{display:flex;height:100%;width:100%}
+
+/* ---------- Sidebar ---------- */
+#sidebar{width:340px;max-width:86vw;flex:0 0 auto;display:flex;flex-direction:column;
+  background:var(--panel);border-right:1px solid var(--line);z-index:1200;
+  transition:margin-left .25s ease}
+#app.collapsed #sidebar{margin-left:-341px}
+
+.side-head{padding:16px 16px 12px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:12px}
+.brand{display:flex;align-items:center;gap:11px}
+.brand-mark{font-size:30px;line-height:1;color:var(--accent);
+  text-shadow:0 0 14px color-mix(in srgb,var(--accent) 60%,transparent)}
+.brand h1{font-family:"Rajdhani",sans-serif;font-weight:700;font-size:20px;margin:0;letter-spacing:.5px}
+.tagline{margin:1px 0 0;font-size:11.5px;color:var(--muted)}
+
+.searchbox{position:relative}
+#search{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:var(--r);
+  background:var(--panel-2);color:var(--fg);font-size:14px}
+#search:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 25%,transparent)}
+#search-results{list-style:none;margin:6px 0 0;padding:0;position:absolute;left:0;right:0;z-index:20;
+  background:var(--panel-2);border:1px solid var(--line);border-radius:var(--r);max-height:46vh;overflow:auto;
+  box-shadow:var(--shadow);display:none}
+#search-results.open{display:block}
+#search-results li{padding:9px 12px;cursor:pointer;border-bottom:1px solid var(--line);font-size:13px;
+  display:flex;gap:9px;align-items:center}
+#search-results li:last-child{border-bottom:0}
+#search-results li:hover,#search-results li.active{background:color-mix(in srgb,var(--accent) 16%,transparent)}
+#search-results .sr-ico{font-size:16px;flex:0 0 auto}
+#search-results .sr-sub{color:var(--muted);font-size:11px}
+
+.toolbar{display:flex;gap:8px;flex-wrap:wrap}
+.tool{flex:1 1 auto;min-width:92px;padding:8px 10px;border:1px solid var(--line);border-radius:var(--r);
+  background:var(--panel-2);color:var(--fg);font-size:12.5px;font-weight:600;cursor:pointer;transition:.15s}
+.tool:hover{border-color:var(--accent);color:var(--accent)}
+.tool[aria-pressed="true"]{background:var(--accent);color:#06241f;border-color:var(--accent)}
+
+.daynight{display:flex;align-items:center;justify-content:center;gap:10px;font-size:12.5px;color:var(--muted)}
+.daynight input{appearance:none;width:42px;height:22px;border-radius:12px;background:#2a3a4c;position:relative;cursor:pointer;transition:.2s;flex:0 0 auto}
+.daynight input::after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#dfe9f2;transition:.2s}
+.daynight input:checked{background:var(--warn)}
+.daynight input:checked::after{left:22px}
+
+/* ---------- Lista de camadas ---------- */
+.layers{flex:1 1 auto;overflow:auto;padding:8px 10px 20px}
+.loading{color:var(--muted);text-align:center;margin-top:30px}
+.grp{margin-top:10px}
+.grp-head{display:flex;align-items:center;gap:8px;width:100%;background:transparent;border:0;color:var(--fg);
+  cursor:pointer;padding:8px 6px;font-family:"Rajdhani",sans-serif;font-weight:700;font-size:14.5px;letter-spacing:.4px;text-transform:uppercase}
+.grp-head .chev{margin-left:auto;color:var(--muted);transition:.2s}
+.grp.closed .chev{transform:rotate(-90deg)}
+.grp.closed .grp-body{display:none}
+.grp-head .grp-count{color:var(--muted);font-size:11px;font-weight:500;letter-spacing:0}
+.grp-body{display:flex;flex-direction:column;gap:2px;padding-left:2px}
+
+.cat{display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:8px;cursor:pointer;user-select:none}
+.cat:hover{background:var(--panel-2)}
+.cat input{appearance:none;width:16px;height:16px;border-radius:4px;border:1.5px solid var(--line);flex:0 0 auto;position:relative;cursor:pointer}
+.cat input:checked{background:var(--chip,var(--accent));border-color:var(--chip,var(--accent))}
+.cat input:checked::after{content:"✓";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px;color:#06241f;font-weight:700}
+.cat .dot{width:12px;height:12px;border-radius:50%;flex:0 0 auto;box-shadow:0 0 6px var(--chip)}
+.cat .emoji{font-size:15px;flex:0 0 auto;width:18px;text-align:center}
+.cat .nm{font-size:13px;flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cat .ct{font-size:11px;color:var(--muted);flex:0 0 auto;font-variant-numeric:tabular-nums}
+
+.side-foot{padding:11px 16px;border-top:1px solid var(--line);font-size:10.5px;color:var(--muted);line-height:1.5}
+.side-foot a{color:var(--accent);text-decoration:none}
+.side-foot a:hover{text-decoration:underline}
+
+/* ---------- Mapa ---------- */
+#map-wrap{position:relative;flex:1 1 auto;min-width:0}
+#map{position:absolute;inset:0;background:#060b10}
+#sidebar-toggle{position:absolute;top:12px;left:12px;z-index:1000;width:42px;height:42px;border-radius:var(--r);
+  border:1px solid var(--line);background:color-mix(in srgb,var(--panel) 92%,transparent);backdrop-filter:blur(6px);
+  color:var(--fg);font-size:18px;cursor:pointer;box-shadow:var(--shadow)}
+#sidebar-toggle:hover{color:var(--accent)}
+.coords{position:absolute;bottom:12px;left:12px;z-index:1000;padding:6px 10px;border-radius:8px;font-size:11.5px;
+  font-family:"Rajdhani",ui-monospace,monospace;letter-spacing:.3px;color:var(--fg);
+  background:color-mix(in srgb,var(--panel) 90%,transparent);border:1px solid var(--line);
+  font-variant-numeric:tabular-nums;pointer-events:none}
+
+/* ---------- Marcadores divIcon ---------- */
+.pin{display:flex;align-items:center;justify-content:center;border-radius:50% 50% 50% 0;transform:rotate(-45deg);
+  border:2px solid rgba(255,255,255,.85);box-shadow:0 2px 6px rgba(0,0,0,.6)}
+.pin span{transform:rotate(45deg);font-size:13px;line-height:1}
+.pin.big{width:30px;height:30px}
+.pin.big span{font-size:15px}
+
+/* ---------- Popups ---------- */
+.leaflet-popup-content-wrapper{background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow)}
+.leaflet-popup-tip{background:var(--panel);border:1px solid var(--line)}
+.leaflet-popup-content{margin:0;width:300px!important}
+.leaflet-container a.leaflet-popup-close-button{color:var(--muted);padding:8px 8px 0 0;z-index:5}
+.pop{font-family:"Inter",sans-serif}
+.pop-imgwrap{position:relative;display:block;width:100%;padding:0;border:0;cursor:zoom-in;background:var(--panel-2);
+  border-radius:11px 11px 0 0;overflow:hidden;line-height:0}
+.pop-img{width:100%;aspect-ratio:16/9;object-fit:cover;display:block;background:var(--panel-2);image-rendering:auto}
+.pop-zoom{position:absolute;right:8px;bottom:8px;width:26px;height:26px;border-radius:7px;display:flex;align-items:center;
+  justify-content:center;font-size:14px;color:#fff;background:rgba(0,0,0,.55);backdrop-filter:blur(3px);transition:.15s}
+.pop-imgwrap:hover .pop-zoom{background:var(--accent);color:#06241f}
+.pop-body{padding:11px 13px 13px}
+.pop h3{margin:0 0 3px;font-family:"Rajdhani",sans-serif;font-size:17px;font-weight:700;display:flex;gap:7px;align-items:center}
+.pop .pop-ico{font-size:17px}
+.pop .pop-type{font-size:11.5px;color:var(--accent);text-transform:uppercase;letter-spacing:.5px;font-weight:600}
+.pop .pop-area{font-size:11.5px;color:var(--muted);margin-left:6px}
+.pop p.desc{font-size:12.5px;line-height:1.5;color:#cdd9e4;margin:8px 0 0}
+.pop .badges{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}
+.pop .badge{font-size:10px;padding:2px 7px;border-radius:999px;background:var(--panel-2);border:1px solid var(--line);color:var(--muted)}
+.pop .badge.conf-confirmed{color:#7ae582;border-color:#2f6b43}
+.pop .badge.conf-community{color:var(--warn);border-color:#6b5a2f}
+.pop .srcs{margin-top:9px;display:flex;flex-wrap:wrap;gap:8px}
+.pop .srcs a{font-size:11px;color:var(--accent);text-decoration:none}
+.pop .srcs a:hover{text-decoration:underline}
+.pop .coordline{margin-top:9px;font-size:10.5px;color:var(--muted);font-family:ui-monospace,monospace}
+
+/* ---------- Lightbox ---------- */
+#lightbox{position:fixed;inset:0;z-index:4000;display:flex;align-items:center;justify-content:center;
+  background:rgba(4,8,12,.9);backdrop-filter:blur(6px);cursor:zoom-out;padding:24px}
+#lightbox[hidden]{display:none!important}
+#lightbox img{max-width:min(1100px,94vw);max-height:90vh;border-radius:12px;box-shadow:0 20px 70px rgba(0,0,0,.7);
+  border:1px solid var(--line)}
+#lightbox .lb-close{position:absolute;top:18px;right:20px;width:40px;height:40px;border-radius:10px;border:1px solid var(--line);
+  background:var(--panel);color:var(--fg);font-size:17px;cursor:pointer}
+#lightbox .lb-close:hover{color:var(--accent)}
+
+/* ---------- Responsivo ---------- */
+@media (max-width:720px){
+  #sidebar{position:absolute;top:0;bottom:0;left:0;box-shadow:var(--shadow)}
+  #app.collapsed #sidebar{margin-left:-341px}
+  #sidebar-toggle{left:auto;right:12px}
+}
