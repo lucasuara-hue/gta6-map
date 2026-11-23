@@ -175,50 +175,69 @@ function tileLayer(style){
 }
 /* -------- base do mapa: "Jogo" (imagem oficial GTA VI) ou "Noite" (tiles) -------- */
 /* Imagem base: GTA VI in-game map, GTADB.ORG (CC BY 4.0), artwork Rockstar. Markers gta6mapsize.com.
-   Bounds alinhados à silhueta da ilha (land.json) pra casar com os 3800 pontos. */
+   Bounds alinhados à silhueta da ilha (land.json) pra casar com os 3800 pontos.
+   A imagem é 1800×2400: nítida até ~zoom 4. Acima disso ela amplia e borra, então
+   no modo Jogo a gente troca pelos tiles vetoriais (nítidos em qualquer zoom) + prédios. */
 const GAME_MAP_URL    = "img/basemap-game.webp";
 const GAME_MAP_BOUNDS = L.latLngBounds([-792.7, 164.7], [-169.7, 633.1]);
 const gameBase  = L.imageOverlay(GAME_MAP_URL, GAME_MAP_BOUNDS, { className: "game-base" });
-let   nightTiles = null;
-let   baseMode   = "game";
+const DEEP_ZOOM = 4;             // acima disso a imagem borra -> usa tiles nítidos
+let baseMode = "game";           // "game" | "night"
+let tilesDay = null, tilesNight = null;
+function getTiles(style){
+  if (style === "day")  return (tilesDay   = tilesDay   || tileLayer("day"));
+  return (tilesNight = tilesNight || tileLayer("night"));
+}
 
-/* prédios vetoriais (só no modo Noite; no modo Jogo já vêm desenhados na imagem) */
+/* prédios vetoriais (nos tiles; a imagem do Jogo já traz os prédios desenhados) */
 const buildingRenderer = L.canvas({ padding: 0.5 });
 let buildingLayer = null;
-function buildingStyle(){
-  return { stroke:true, color:"#6f87a6", weight:0.45, fill:true, fillColor:"#475a73", fillOpacity:0.96 };
+function buildingStyle(mode){
+  return mode === "night"
+    ? { stroke:true, color:"#6f87a6", weight:0.45, fill:true, fillColor:"#475a73", fillOpacity:0.96 }
+    : { stroke:true, color:"#8f8699", weight:0.40, fill:true, fillColor:"#b9afc4", fillOpacity:0.92 };
 }
-function applyBuildingVisibility(){
+function setBuildings(on, mode){
   if (!buildingLayer) return;
-  const show = baseMode === "night" && map.getZoom() >= 2;
-  if (show && !map.hasLayer(buildingLayer)) buildingLayer.addTo(map);
-  else if (!show && map.hasLayer(buildingLayer)) map.removeLayer(buildingLayer);
+  if (on){
+    buildingLayer.setStyle(buildingStyle(mode));
+    if (!map.hasLayer(buildingLayer)) buildingLayer.addTo(map);
+  } else if (map.hasLayer(buildingLayer)) map.removeLayer(buildingLayer);
+}
+
+/* mostra a base certa pro modo + zoom atuais */
+function renderBase(){
+  const z = map.getZoom();
+  if (baseMode === "night"){
+    if (map.hasLayer(gameBase)) map.removeLayer(gameBase);
+    if (tilesDay && map.hasLayer(tilesDay)) map.removeLayer(tilesDay);
+    const t = getTiles("night"); if (!map.hasLayer(t)) t.addTo(map); t.bringToBack();
+    setBuildings(z >= 2, "night");
+  } else if (z >= DEEP_ZOOM){        // Jogo, ampliado -> tiles nítidos (dia) + prédios
+    if (map.hasLayer(gameBase)) map.removeLayer(gameBase);
+    if (tilesNight && map.hasLayer(tilesNight)) map.removeLayer(tilesNight);
+    const t = getTiles("day"); if (!map.hasLayer(t)) t.addTo(map); t.bringToBack();
+    setBuildings(true, "day");
+  } else {                           // Jogo, overview -> imagem bonita
+    [tilesDay, tilesNight].forEach(l => l && map.hasLayer(l) && map.removeLayer(l));
+    if (!map.hasLayer(gameBase)) gameBase.addTo(map); gameBase.bringToBack();
+    setBuildings(false);
+  }
 }
 fetch("data/surface.json").then(r=>r.json()).then(fc => {
   buildingLayer = L.geoJSON(fc, {
     filter: f => f.properties && f.properties.layer === "building",
     coordsToLatLng: c => L.latLng(-c[1], c[0]),
-    renderer: buildingRenderer, interactive: false, style: buildingStyle,
+    renderer: buildingRenderer, interactive: false, style: () => buildingStyle("day"),
   });
-  applyBuildingVisibility();
+  renderBase();
 }).catch(err => console.warn("prédios indisponíveis:", err));
-map.on("zoomend", applyBuildingVisibility);
+map.on("zoomend", renderBase);
+renderBase();
 
-function setBase(mode){
-  baseMode = mode;
-  if (mode === "game"){
-    if (nightTiles) map.removeLayer(nightTiles);
-    gameBase.addTo(map); gameBase.bringToBack();
-  } else {
-    map.removeLayer(gameBase);
-    if (!nightTiles) nightTiles = tileLayer("night");
-    nightTiles.addTo(map); nightTiles.bringToBack();
-  }
-  applyBuildingVisibility();
-}
-setBase("game");
 document.getElementById("toggle-base").addEventListener("change", (e) => {
-  setBase(e.target.checked ? "game" : "night");
+  baseMode = e.target.checked ? "game" : "night";
+  renderBase();
 });
 
 /* -------- rótulos de bairros / regiões -------- */
